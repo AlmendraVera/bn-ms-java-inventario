@@ -5,42 +5,51 @@ import cl.duoc.bn.inventario.model.Producto;
 import cl.duoc.bn.inventario.repository.CategoriaRepository;
 import cl.duoc.bn.inventario.repository.ProductoRepository;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
-@Configuration
-public class DatosIniciales {
+/** Carga categorías y productos de ejemplo al iniciar (la BD H2 en memoria parte vacía). */
+@Component
+public class DatosIniciales implements CommandLineRunner {
 
-    @Bean
-    CommandLineRunner cargarDatos(CategoriaRepository categorias, ProductoRepository productos) {
-        return args -> {
-            if (categorias.count() > 0) {
-                return;
-            }
-            Categoria ropa = new Categoria();
-            ropa.setNombre("Ropa");
-            Categoria tecnologia = new Categoria();
-            tecnologia.setNombre("Tecnología");
-            Categoria hogar = new Categoria();
-            hogar.setNombre("Hogar");
-            categorias.save(ropa);
-            categorias.save(tecnologia);
-            categorias.save(hogar);
+    private final CategoriaRepository categoriaRepository;
+    private final ProductoRepository productoRepository;
 
-            crear(productos, "POL-001", "Polera básica", 10, ropa);
-            crear(productos, "ZAP-001", "Zapatillas urbanas", 25, ropa);
-            crear(productos, "AUD-001", "Audífonos bluetooth", 40, tecnologia);
-            crear(productos, "CAR-001", "Cargador USB-C", 60, tecnologia);
-            crear(productos, "LAM-001", "Lámpara de escritorio", 15, hogar);
-        };
+    public DatosIniciales(CategoriaRepository categoriaRepository, ProductoRepository productoRepository) {
+        this.categoriaRepository = categoriaRepository;
+        this.productoRepository = productoRepository;
     }
 
-    private void crear(ProductoRepository repo, String sku, String nombre, int stock, Categoria categoria) {
+    @Override
+    public void run(String... args) {
+        if (categoriaRepository.count() > 0) {
+            return;
+        }
+        Categoria electronica = crearCategoria("Electrónica", "Audio, carga y accesorios");
+        Categoria hogar = crearCategoria("Hogar", "Decoración y utensilios");
+        Categoria ropa = crearCategoria("Ropa", "Vestuario y accesorios");
+
+        crearProducto("AUD-001", "Audífonos Bluetooth", 19990, 50, electronica);
+        crearProducto("CAR-002", "Cargador USB-C 30W", 9990, 120, electronica);
+        crearProducto("LAM-003", "Lámpara LED de escritorio", 14990, 30, hogar);
+        crearProducto("POL-004", "Polerón canguro", 24990, 15, ropa);
+        // Producto sin stock a propósito: sirve para demostrar el error 409 al crear una orden
+        crearProducto("TAZ-005", "Set de tazas cerámicas", 12990, 0, hogar);
+    }
+
+    private Categoria crearCategoria(String nombre, String descripcion) {
+        Categoria c = new Categoria();
+        c.setNombre(nombre);
+        c.setDescripcion(descripcion);
+        return categoriaRepository.save(c);
+    }
+
+    private void crearProducto(String sku, String nombre, int precio, int stock, Categoria categoria) {
         Producto p = new Producto();
         p.setSku(sku);
         p.setNombre(nombre);
+        p.setPrecio(precio);
         p.setStock(stock);
         p.setCategoria(categoria);
-        repo.save(p);
+        productoRepository.save(p);
     }
 }
